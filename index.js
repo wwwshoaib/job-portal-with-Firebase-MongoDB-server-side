@@ -8,7 +8,7 @@ const port = process.env.PORT || 5000;
 //middle ware
 
 app.use(cors());
-app.use(express());
+app.use(express.json());
 
 
 
@@ -37,6 +37,13 @@ async function run() {
 
     // jobs related API 
     const jobsCollection = client.db('jobportalDB').collection('jobs');
+
+    // post a job using POST method
+    app.post('/jobs', async(req, res) =>{
+      const job = req.body;
+      const result = await jobsCollection.insertOne(job);
+      res.send(result);
+    })
 // get all jobs using GET API method
     app.get('/jobs', async(req, res) => {
       const cursor = jobsCollection.find();
@@ -52,6 +59,40 @@ async function run() {
       const result = await jobsCollection.findOne(query);
       res.send(result);
     })
+
+
+    //post job applications using POST API method
+      const jobApplicationsCollection = client.db('jobportalDB').collection('job_applications');
+
+    app.post('/job-applications', async(req, res) => {
+      const application = req.body;
+      const result = await jobApplicationsCollection.insertOne(application);
+      res.send(result);
+    })
+
+    //get zero data or one data or many data [0, 1, many]
+    app.get('/job-applications', async(req, res) =>{
+      const email = req.query.email;
+      const query = { applicant_email: email};
+      const result = await jobApplicationsCollection.find(query).toArray();
+
+      for(const application of result) {
+        const query1 = {_id: new ObjectId(application.job_id)}
+        const job =  await jobsCollection.findOne(query1);
+        if(job) {
+          application._id = job._id;
+          application.title = job.title;
+          application.company = job.company;
+          application.company_logo = job.company_logo;
+          application.location = job.location;
+          application.applicationDeadline = job.applicationDeadline;
+          application.jobType = job.jobType;
+        }
+      }
+      res.send(result);
+    })
+
+   
 
 
   } finally {
